@@ -1,5 +1,10 @@
 package Controller;
 
+import java.sql.Connection;
+
+import Model.Account;
+import Service.AccountService;
+import Util.ConnectionUtil;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 
@@ -14,9 +19,19 @@ public class SocialMediaController {
      * suite must receive a Javalin object from this method.
      * @return a Javalin app object which defines the behavior of the Javalin controller.
      */
+
+     private AccountService accountService;
+
+    // We need to add the connection 
+    public SocialMediaController(){
+        this.accountService = new AccountService(ConnectionUtil.getConnection());
+    }
+
     public Javalin startAPI() {
         Javalin app = Javalin.create();
         app.get("example-endpoint", this::exampleHandler);
+        app.post("/register", this::registerAccount);
+        app.post("/login", this::loginAccount);
 
         return app;
     }
@@ -29,5 +44,36 @@ public class SocialMediaController {
         context.json("sample text");
     }
 
+    private void registerAccount(Context ctx){
+        Account data = ctx.bodyAsClass(Account.class);
+        String username = data.getUsername();
+        String password = data.getPassword();
+
+        try {
+            Account account = accountService.registerAccount(username, password);
+
+            ctx.status(200).json(account);
+
+        } catch (Exception e) {
+            // TODO: handle exception
+            ctx.status(400);
+        }
+    }
+
+    private void loginAccount(Context ctx){
+        Account data = ctx.bodyAsClass(Account.class);
+        String username = data.getUsername();
+        String password = data.getPassword();
+
+        try {
+            Account account = accountService.loginAccount(username, password);
+
+            ctx.status(200).json(account);
+
+        } catch (Exception e) {
+            // TODO: handle exception
+            ctx.status(401);
+        }
+    }
 
 }
