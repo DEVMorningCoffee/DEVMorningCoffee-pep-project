@@ -1,6 +1,9 @@
 package Controller;
 
 import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import Model.Account;
 import Model.Message;
@@ -38,6 +41,9 @@ public class SocialMediaController {
         app.post("/register", this::registerAccount);
         app.post("/login", this::loginAccount);
         app.post("/messages", this::createMessage);
+        app.get("/messages", this::getAllMessage);
+        app.get("/messages/{message_id}", this::getMessageByID);
+        
 
         return app;
     }
@@ -97,4 +103,24 @@ public class SocialMediaController {
         }
     }
 
+    private void getAllMessage(Context ctx) {
+        try {
+            List<Message> messages = messageService.getAllMessage();
+            ctx.status(200).json(messages);
+        } catch (Exception e) {
+            // TODO: handle exception
+            ctx.status(200).json(new ArrayList<>());
+        }
+    }
+
+    private void getMessageByID(Context ctx){
+        try {
+            int messageID = Integer.parseInt(ctx.pathParam("message_id"));
+            Message message = messageService.getMessage(messageID);
+            ctx.status(200).json(message);
+        } catch (Exception e) {
+            // TODO: handle exception
+            ctx.status(200).json(null);
+        }
+    }
 }

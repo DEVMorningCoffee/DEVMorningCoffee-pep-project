@@ -2,6 +2,7 @@ package Service;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 
 import DAO.MessageDAO;
 import DAO.MessageDAOImpl;
@@ -20,5 +21,13 @@ public class MessageService {
         }
 
         return messageDAO.uploadMessage(accountID, messageText, timePostedEpoch);
+    }
+
+    public List<Message> getAllMessage() throws SQLException{
+        return messageDAO.retrieveAllMessage();
+    }
+
+    public Message getMessage(int messageID) throws SQLException{
+        return messageDAO.retrieveMessageByID(messageID);
     }
 }
