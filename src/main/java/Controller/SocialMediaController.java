@@ -3,7 +3,9 @@ package Controller;
 import java.sql.Connection;
 
 import Model.Account;
+import Model.Message;
 import Service.AccountService;
+import Service.MessageService;
 import Util.ConnectionUtil;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
@@ -21,10 +23,13 @@ public class SocialMediaController {
      */
 
      private AccountService accountService;
+     private final MessageService messageService;
 
     // We need to add the connection 
     public SocialMediaController(){
-        this.accountService = new AccountService(ConnectionUtil.getConnection());
+        Connection conn = ConnectionUtil.getConnection();
+        this.accountService = new AccountService(conn);
+        this.messageService = new MessageService(conn);
     }
 
     public Javalin startAPI() {
@@ -32,6 +37,7 @@ public class SocialMediaController {
         app.get("example-endpoint", this::exampleHandler);
         app.post("/register", this::registerAccount);
         app.post("/login", this::loginAccount);
+        app.post("/messages", this::createMessage);
 
         return app;
     }
@@ -73,6 +79,21 @@ public class SocialMediaController {
         } catch (Exception e) {
             // TODO: handle exception
             ctx.status(401);
+        }
+    }
+
+    private void createMessage(Context ctx){
+        Message data = ctx.bodyAsClass(Message.class);
+        int postedBy = data.getPosted_by();
+        String messageText = data.getMessage_text();
+        long timePostedEpoch = data.getTime_posted_epoch();
+
+        try{
+            Message message = messageService.createMessage(postedBy, messageText, timePostedEpoch);
+
+            ctx.status(200).json(message);
+        }catch(Exception e){
+            ctx.status(400);
         }
     }
 

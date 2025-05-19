@@ -6,5 +6,6 @@ import Model.Message;
 
 public interface MessageDAO {
     
-    public Message createMessage(int posted_by, String message_text, long time_posted_epoch) throws SQLException;
+    public Message uploadMessage(int postedBy, String messageText, long timePostedEpoch) throws SQLException;
+    public Message getMessage(int postedBy, String messageText, long timePostedEpoch) throws SQLException;
 }

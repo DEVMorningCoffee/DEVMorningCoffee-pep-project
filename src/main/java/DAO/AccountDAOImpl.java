@@ -80,4 +80,20 @@ public class AccountDAOImpl implements AccountDAO {
             if (prep != null) prep.close();
         }
     }
+
+    public boolean checkUserExistsId(int accountID) throws SQLException{
+        String sql = "SELECT 1 FROM ACCOUNT WHERE account_id = ?";
+        PreparedStatement prep = null;
+        ResultSet rs = null;
+
+        try{
+            prep = connection.prepareStatement(sql);
+            prep.setInt(1, accountID);
+            rs = prep.executeQuery();
+            return rs.next();
+        }finally{
+            if (rs != null) rs.close();
+            if (prep != null) prep.close();
+        }
+    }
 }
