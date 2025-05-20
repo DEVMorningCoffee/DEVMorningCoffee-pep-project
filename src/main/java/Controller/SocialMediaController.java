@@ -1,7 +1,6 @@
 package Controller;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,6 +44,7 @@ public class SocialMediaController {
         app.get("/messages/{message_id}", this::getMessage);
         app.delete("/messages/{message_id}", this::deleteMessage);
         app.patch("/messages/{message_id}", this::updateMessage);
+        app.get("/accounts/{account_id}/messages", this::getAllMessagesByID);
         
 
         return app;
@@ -133,7 +133,7 @@ public class SocialMediaController {
             Message message = messageService.deleteMessage(messageID);
             ctx.status(200).json(message);
         }catch(Exception e){
-            ctx.status(200);
+            ctx.status(200).json(new ArrayList<>());
         }
     }
 
@@ -144,10 +144,28 @@ public class SocialMediaController {
             String messageText = updateData.getMessage_text();
 
             Message message = messageService.updateMessage(messageID, messageText);
+
+            if(message == null){
+                ctx.status(400);
+            }
+
             ctx.status(200).json(message);
         } catch (Exception e) {
             // TODO: handle exception
             ctx.status(400);
+        }
+    }
+
+    private void getAllMessagesByID(Context ctx){
+        try {
+            int accountID = Integer.parseInt(ctx.pathParam("account_id"));
+            List<Message> messages = messageService.getAllMessagesByID(accountID);
+
+            ctx.status(200).json(messages);
+
+        } catch (Exception e) {
+            // TODO: handle exception
+            ctx.status(200).json(new ArrayList<>());
         }
     }
 

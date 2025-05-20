@@ -13,4 +13,5 @@ public interface MessageDAO {
     public Message retrieveMessageByID(int messageID) throws SQLException;
     public Message deleteMessageByID(int messageID) throws SQLException;
     public Message updateMessageByID(int messageID, String messageText) throws SQLException;
+    public List<Message> retrieveMessageByAccountID(int accountID) throws SQLException;
 }
