@@ -42,8 +42,9 @@ public class SocialMediaController {
         app.post("/login", this::loginAccount);
         app.post("/messages", this::createMessage);
         app.get("/messages", this::getAllMessage);
-        app.get("/messages/{message_id}", this::getMessageByID);
-        app.delete("/messages/{message_id}", this::deleteMessageByID);
+        app.get("/messages/{message_id}", this::getMessage);
+        app.delete("/messages/{message_id}", this::deleteMessage);
+        app.patch("/messages/{message_id}", this::updateMessage);
         
 
         return app;
@@ -114,7 +115,7 @@ public class SocialMediaController {
         }
     }
 
-    private void getMessageByID(Context ctx){
+    private void getMessage(Context ctx){
         try {
             int messageID = Integer.parseInt(ctx.pathParam("message_id"));
             Message message = messageService.getMessage(messageID);
@@ -126,13 +127,27 @@ public class SocialMediaController {
         }
     }
 
-    private void deleteMessageByID(Context ctx){
+    private void deleteMessage(Context ctx){
         try{
             int messageID = Integer.parseInt(ctx.pathParam("message_id"));
             Message message = messageService.deleteMessage(messageID);
             ctx.status(200).json(message);
         }catch(Exception e){
             ctx.status(200);
+        }
+    }
+
+    private void updateMessage(Context ctx){
+        try {
+            int messageID = Integer.parseInt(ctx.pathParam("message_id"));
+            Message updateData = ctx.bodyAsClass(Message.class);
+            String messageText = updateData.getMessage_text();
+
+            Message message = messageService.updateMessage(messageID, messageText);
+            ctx.status(200).json(message);
+        } catch (Exception e) {
+            // TODO: handle exception
+            ctx.status(400);
         }
     }
 

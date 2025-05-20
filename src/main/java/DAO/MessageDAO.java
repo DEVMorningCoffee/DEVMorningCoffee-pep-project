@@ -11,4 +11,6 @@ public interface MessageDAO {
     public Message getMessage(int postedBy, String messageText, long timePostedEpoch) throws SQLException;
     public List<Message> retrieveAllMessage() throws SQLException;
     public Message retrieveMessageByID(int messageID) throws SQLException;
+    public Message deleteMessageByID(int messageID) throws SQLException;
+    public Message updateMessageByID(int messageID, String messageText) throws SQLException;
 }

@@ -104,7 +104,7 @@ public class MessageDAOImpl implements MessageDAO{
     }
 
     public Message retrieveMessageByID(int messageID) throws SQLException{
-        String sql = "SELECT * FROM MESSAGE WHERE message_id = ?";
+        String sql = "SELECT 1 FROM MESSAGE WHERE message_id = ?";
         PreparedStatement prep = null;
         ResultSet rs = null;
     
@@ -142,7 +142,10 @@ public class MessageDAOImpl implements MessageDAO{
 
         try {
             prep = connection.prepareStatement(sql);
+            prep.setInt(1, messageID);
+
             rs = prep.executeQuery();
+
             if(rs.next()){
                 Message message = new Message(
                     rs.getInt("message_id"),
@@ -159,6 +162,33 @@ public class MessageDAOImpl implements MessageDAO{
         }
 
         return null;
+    }
+
+    public Message updateMessageByID(int messageID, String messageText) throws SQLException {
+        // First, check if the message exists
+        Message existingMessage = retrieveMessageByID(messageID);
+        if (existingMessage == null) {
+            return null; // or throw new SQLException("Message doesn't exist");
+        }
+    
+        String sql = "UPDATE MESSAGE SET message_text = ? WHERE message_id = ?";
+        PreparedStatement prep = null;
+    
+        try {
+            prep = connection.prepareStatement(sql);
+            prep.setString(1, messageText);
+            prep.setInt(2, messageID);
+            int rowsUpdated = prep.executeUpdate();
+    
+            if (rowsUpdated > 0) {
+                // Return the updated message
+                return retrieveMessageByID(messageID);
+            } else {
+                return null;
+            }
+        } finally {
+            if (prep != null) prep.close();
+        }
     }
     
 }
