@@ -1,6 +1,5 @@
 package Controller;
 
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,165 +7,134 @@ import Model.Account;
 import Model.Message;
 import Service.AccountService;
 import Service.MessageService;
-import Util.ConnectionUtil;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 
-/**
- * TODO: You will need to write your own endpoints and handlers for your controller. The endpoints you will need can be
- * found in readme.md as well as the test cases. You should
- * refer to prior mini-project labs and lecture materials for guidance on how a controller may be built.
- */
 public class SocialMediaController {
-    /**
-     * In order for the test cases to work, you will need to write the endpoints in the startAPI() method, as the test
-     * suite must receive a Javalin object from this method.
-     * @return a Javalin app object which defines the behavior of the Javalin controller.
-     */
+    private final AccountService accountService;
+    private final MessageService messageService;
 
-     private AccountService accountService;
-     private final MessageService messageService;
-
-    // We need to add the connection 
-    public SocialMediaController(){
-        Connection conn = ConnectionUtil.getConnection();
-        this.accountService = new AccountService(conn);
-        this.messageService = new MessageService(conn);
+    public SocialMediaController() {
+        this.accountService = new AccountService();
+        this.messageService = new MessageService();
     }
 
     public Javalin startAPI() {
         Javalin app = Javalin.create();
+
         app.get("example-endpoint", this::exampleHandler);
         app.post("/register", this::registerAccount);
         app.post("/login", this::loginAccount);
         app.post("/messages", this::createMessage);
-        app.get("/messages", this::getAllMessage);
+        app.get("/messages", this::getAllMessages);
         app.get("/messages/{message_id}", this::getMessage);
         app.delete("/messages/{message_id}", this::deleteMessage);
         app.patch("/messages/{message_id}", this::updateMessage);
-        app.get("/accounts/{account_id}/messages", this::getAllMessagesByID);
-        
+        app.get("/accounts/{account_id}/messages", this::accountMessages);
 
         return app;
     }
 
-    /**
-     * This is an example handler for an example endpoint.
-     * @param context The Javalin Context object manages information about both the HTTP request and response.
-     */
     private void exampleHandler(Context context) {
         context.json("sample text");
     }
 
-    private void registerAccount(Context ctx){
-        Account data = ctx.bodyAsClass(Account.class);
-        String username = data.getUsername();
-        String password = data.getPassword();
-
+    private void registerAccount(Context ctx) {
         try {
-            Account account = accountService.registerAccount(username, password);
+            Account accountData = ctx.bodyAsClass(Account.class);
+            Account newAccount = accountService.registerAccount(accountData);
 
-            ctx.status(200).json(account);
+            if (newAccount == null) {
+                throw new Exception("Invalid account data");
+            }
 
+            ctx.status(200).json(newAccount);
         } catch (Exception e) {
-            // TODO: handle exception
             ctx.status(400);
         }
     }
 
-    private void loginAccount(Context ctx){
-        Account data = ctx.bodyAsClass(Account.class);
-        String username = data.getUsername();
-        String password = data.getPassword();
-
+    private void loginAccount(Context ctx) {
         try {
-            Account account = accountService.loginAccount(username, password);
+            Account accountData = ctx.bodyAsClass(Account.class);
+            Account accessAccount = accountService.loginAccount(accountData);
 
-            ctx.status(200).json(account);
+            if (accessAccount == null) {
+                throw new Exception("Invalid login");
+            }
 
+            ctx.status(200).json(accessAccount);
         } catch (Exception e) {
-            // TODO: handle exception
             ctx.status(401);
         }
     }
 
-    private void createMessage(Context ctx){
-        Message data = ctx.bodyAsClass(Message.class);
-        int postedBy = data.getPosted_by();
-        String messageText = data.getMessage_text();
-        long timePostedEpoch = data.getTime_posted_epoch();
+    private void createMessage(Context ctx) {
+        try {
+            Message messageData = ctx.bodyAsClass(Message.class);
+            Message newMessage = messageService.createMessage(messageData);
 
-        try{
-            Message message = messageService.createMessage(postedBy, messageText, timePostedEpoch);
+            if (newMessage == null) {
+                throw new Exception("Invalid message data");
+            }
 
-            ctx.status(200).json(message);
-        }catch(Exception e){
+            ctx.status(200).json(newMessage);
+        } catch (Exception e) {
             ctx.status(400);
         }
     }
 
-    private void getAllMessage(Context ctx) {
+    private void getAllMessages(Context ctx) {
         try {
-            List<Message> messages = messageService.getAllMessage();
-            ctx.status(200).json(messages);
+            List<Message> messages = messageService.getAllMessages();
+            ctx.status(200).json(messages != null ? messages : new ArrayList<>());
         } catch (Exception e) {
-            // TODO: handle exception
             ctx.status(200).json(new ArrayList<>());
         }
     }
 
-    private void getMessage(Context ctx){
+    private void getMessage(Context ctx) {
         try {
             int messageID = Integer.parseInt(ctx.pathParam("message_id"));
             Message message = messageService.getMessage(messageID);
-            
+
             ctx.status(200).json(message);
         } catch (Exception e) {
-            // TODO: handle exception
             ctx.status(200);
         }
     }
 
-    private void deleteMessage(Context ctx){
-        try{
+    private void deleteMessage(Context ctx) {
+        try {
             int messageID = Integer.parseInt(ctx.pathParam("message_id"));
-            Message message = messageService.deleteMessage(messageID);
-            ctx.status(200).json(message);
-        }catch(Exception e){
-            ctx.status(200).json(new ArrayList<>());
+            Message deletedMessage = messageService.deleteMessage(messageID);
+
+            ctx.status(200).json(deletedMessage);
+        } catch (Exception e) {
+            ctx.status(200);
         }
     }
 
-    private void updateMessage(Context ctx){
+    private void updateMessage(Context ctx) {
         try {
             int messageID = Integer.parseInt(ctx.pathParam("message_id"));
-            Message updateData = ctx.bodyAsClass(Message.class);
-            String messageText = updateData.getMessage_text();
+            String messageText = ctx.bodyAsClass(Message.class).getMessage_text();
 
-            Message message = messageService.updateMessage(messageID, messageText);
-
-            if(message == null){
-                ctx.status(400);
-            }
-
-            ctx.status(200).json(message);
+            Message updatedMessage = messageService.updateMessage(messageID, messageText);
+            ctx.status(200).json(updatedMessage);
         } catch (Exception e) {
-            // TODO: handle exception
             ctx.status(400);
         }
     }
 
-    private void getAllMessagesByID(Context ctx){
+    private void accountMessages(Context ctx) {
         try {
             int accountID = Integer.parseInt(ctx.pathParam("account_id"));
-            List<Message> messages = messageService.getAllMessagesByID(accountID);
 
-            ctx.status(200).json(messages);
-
+            List<Message> messages = messageService.accountMessages(accountID);
+            ctx.status(200).json(messages != null ? messages : new ArrayList<>());
         } catch (Exception e) {
-            // TODO: handle exception
             ctx.status(200).json(new ArrayList<>());
         }
     }
-
 }

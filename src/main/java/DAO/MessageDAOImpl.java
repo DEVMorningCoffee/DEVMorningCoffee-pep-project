@@ -1,220 +1,166 @@
 package DAO;
 
+import Model.Message;
+import Util.ConnectionUtil;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import Model.Message;
-
 public class MessageDAOImpl implements MessageDAO {
     private final Connection connection;
-    private final AccountDAO accountDAO;
 
-    public MessageDAOImpl(Connection connection){
-        this.connection = connection;
-        this.accountDAO = new AccountDAOImpl(connection);
+    public MessageDAOImpl() {
+        this.connection = new ConnectionUtil().getConnection();
     }
 
-    public Message uploadMessage(int accountID, String messageText, long timePostedEpoch) throws SQLException{
-        if(!accountDAO.checkUserExistsId(accountID)){
-            throw new SQLException("User doesn't exist");
-        }
+    public Message createMessage(Message message) {
+        String sql = "INSERT INTO message(posted_by, message_text, time_posted_epoch) VALUES (?, ?, ?)";
 
-        String sql = "INSERT INTO MESSAGE(posted_by, message_text, time_posted_epoch) VALUES (?, ?, ?)";
-        PreparedStatement prep = null;
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
+            preparedStatement.setInt(1, message.getPosted_by());
+            preparedStatement.setString(2, message.getMessage_text());
+            preparedStatement.setLong(3, message.getTime_posted_epoch());
+            preparedStatement.executeUpdate();
 
-        try {
-            prep = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);
-            prep.setInt(1, accountID);
-            prep.setString(2, messageText);
-            prep.setLong(3, timePostedEpoch);
-            prep.executeUpdate();
-            
-            // Get the generated message_id
-            ResultSet rs = prep.getGeneratedKeys();
-            if (rs.next()) {
-                int messageId = rs.getInt(1);
-                return retrieveMessageByID(messageId);
+            try (ResultSet resultSet = preparedStatement.getGeneratedKeys()) {
+                if (resultSet.next()) {
+                    return new Message(resultSet.getInt(1),
+                            message.getPosted_by(),
+                            message.getMessage_text(),
+                            message.getTime_posted_epoch());
+                }
             }
-            
+
             return null;
-        } finally {
-            if (prep != null) prep.close();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return null;
         }
     }
 
-    public Message getMessage(int accountID, String messageText, long timePostedEpoch) throws SQLException{
-        String sql = "SELECT * FROM MESSAGE WHERE posted_by = ? AND message_text = ? AND time_posted_epoch = ?";
-        PreparedStatement prep = null;
-        ResultSet rs = null;
+    public List<Message> getAllMessages() {
+        String sql = "SELECT * FROM message";
+        List<Message> messages = new ArrayList<>();
 
-        try {
-            prep = connection.prepareStatement(sql);
-            prep.setInt(1, accountID);
-            prep.setString(2, messageText);
-            prep.setLong(3, timePostedEpoch);
-            rs = prep.executeQuery();
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql)) {
 
-            if (rs.next()) {
-                return new Message(
-                    rs.getInt("message_id"),
-                    rs.getInt("posted_by"),
-                    rs.getString("message_text"),
-                    rs.getLong("time_posted_epoch")
-                );
+            while (resultSet.next()) {
+                messages.add(new Message(
+                        resultSet.getInt("message_id"),
+                        resultSet.getInt("posted_by"),
+                        resultSet.getString("message_text"),
+                        resultSet.getLong("time_posted_epoch")
+                ));
             }
-        } finally {
-            if (rs != null) rs.close();
-            if (prep != null) prep.close();
-        }
 
-        return null;
-    }
-
-    public List<Message> retrieveAllMessage() throws SQLException {    
-        String sql = "SELECT * FROM MESSAGE";
-        PreparedStatement prep = null;
-        ResultSet rs = null;
-    
-        try {
-            List<Message> messages = new ArrayList<>();
-
-            prep = connection.prepareStatement(sql);
-            rs = prep.executeQuery();
-    
-            while(rs.next()) {
-                Message message = new Message(
-                    rs.getInt("message_id"),
-                    rs.getInt("posted_by"),
-                    rs.getString("message_text"),
-                    rs.getLong("time_posted_epoch")
-                );
-
-                messages.add(message);
-            }
-        
             return messages;
-
-        } finally {
-            if (rs != null) rs.close();
-            if (prep != null) prep.close();
-        }
-    
-    }
-
-    public Message retrieveMessageByID(int messageID) throws SQLException{
-        String sql = "SELECT * FROM MESSAGE WHERE message_id = ?";
-        PreparedStatement prep = null;
-        ResultSet rs = null;
-    
-        try {
-            prep = connection.prepareStatement(sql);
-            prep.setInt(1, messageID);
-
-            rs = prep.executeQuery();
-            
-            if (rs.next()) {
-                return new Message(
-                    rs.getInt("message_id"),
-                    rs.getInt("posted_by"),
-                    rs.getString("message_text"),
-                    rs.getLong("time_posted_epoch")
-                );
-
-            }
-
-        } finally {
-            if (rs != null) rs.close();
-            if (prep != null) prep.close();
-        }
-
-        return null;
-    }
-
-    public Message deleteMessageByID(int messageID) throws SQLException{
-        // First get the message to return after deletion
-        Message message = retrieveMessageByID(messageID);
-        if (message == null) {
-            return null; // Message doesn't exist
-        }
-    
-        String sql = "DELETE FROM MESSAGE WHERE message_id = ?";
-        PreparedStatement prep = null;
-    
-        try {
-            prep = connection.prepareStatement(sql);
-            prep.setInt(1, messageID);
-            int rowsAffected = prep.executeUpdate();
-            
-            // If deletion was successful, return the message that was deleted
-            if (rowsAffected > 0) {
-                return message;
-            } else {
-                return null; // No rows were affected (message not found)
-            }
-        } finally {
-            if (prep != null) prep.close();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return null;
         }
     }
 
-    public Message updateMessageByID(int messageID, String messageText) throws SQLException {
-        // First, check if the message exists
-        Message existingMessage = retrieveMessageByID(messageID);
-        if (existingMessage == null) {
-            return null; // Message doesn't exist
-        }
-    
-        String sql = "UPDATE MESSAGE SET message_text = ? WHERE message_id = ?";
-        PreparedStatement prep = null;
-    
-        try {
-            prep = connection.prepareStatement(sql);
-            prep.setString(1, messageText);
-            prep.setInt(2, messageID);
-            int rowsUpdated = prep.executeUpdate();
-    
-            if (rowsUpdated > 0) {
-                // Return the updated message
-                return retrieveMessageByID(messageID);
-            } else {
-                return null;
+    public Message getMessage(int messageID) {
+        String sql = "SELECT * FROM message WHERE message_id = ?";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setInt(1, messageID);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return new Message(
+                        resultSet.getInt("message_id"),
+                        resultSet.getInt("posted_by"),
+                        resultSet.getString("message_text"),
+                        resultSet.getLong("time_posted_epoch")
+                    );
+                }
             }
-        } finally {
-            if (prep != null) prep.close();
+
+            return null;
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return null;
         }
     }
 
-    public List<Message> retrieveMessageByAccountID(int accountID) throws SQLException{
-        String sql = "SELECT * FROM MESSAGE WHERE posted_by = ?";
-        PreparedStatement prep = null;
-        ResultSet rs = null;
+    public Message deleteMessage(int messageID) {
+        String sql = "DELETE FROM message WHERE message_id = ?";
 
         try {
-            List<Message> messages = new ArrayList<>();
+            Message message = getMessage(messageID);
 
-            prep = connection.prepareStatement(sql);
-            prep.setInt(1, accountID);
-            rs = prep.executeQuery();
-    
-            while (rs.next()) {
-                Message message = new Message(
-                    rs.getInt("message_id"),
-                    rs.getInt("posted_by"),
-                    rs.getString("message_text"),
-                    rs.getLong("time_posted_epoch")
-                );
+            if (message == null) return null;
 
-                messages.add(message);
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                preparedStatement.setInt(1, messageID);
+                preparedStatement.executeUpdate();
             }
-        
+
+            return message;
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return null;
+        }
+    }
+
+    public Message updateMessage(int messageID, String messageText) {
+        String sql = "UPDATE message SET message_text = ? WHERE message_id = ?";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, messageText);
+            preparedStatement.setInt(2, messageID);
+            preparedStatement.executeUpdate();
+
+            return getMessage(messageID);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return null;
+        }
+    }
+
+    public List<Message> accountMessages(int accountID) {
+        String sql = "SELECT * FROM message WHERE posted_by = ?";
+        List<Message> messages = new ArrayList<>();
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setInt(1, accountID);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    messages.add(new Message(
+                            resultSet.getInt("message_id"),
+                            resultSet.getInt("posted_by"),
+                            resultSet.getString("message_text"),
+                            resultSet.getLong("time_posted_epoch")
+                    ));
+                }
+            }
+
             return messages;
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return null;
+        }
+    }
 
-        } finally {
-            if (rs != null) rs.close();
-            if (prep != null) prep.close();
+    public boolean checkIfMessageExist(int messageID) {
+        String sql = "SELECT * FROM message WHERE message_id = ?";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setInt(1, messageID);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                return resultSet.next();
+            }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return false;
         }
     }
 }

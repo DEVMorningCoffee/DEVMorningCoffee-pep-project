@@ -1,17 +1,16 @@
 package DAO;
 
-import java.sql.SQLException;
-import java.util.List;
-
 import Model.Message;
 
+import java.util.List;
+
 public interface MessageDAO {
-    
-    public Message uploadMessage(int postedBy, String messageText, long timePostedEpoch) throws SQLException;
-    public Message getMessage(int postedBy, String messageText, long timePostedEpoch) throws SQLException;
-    public List<Message> retrieveAllMessage() throws SQLException;
-    public Message retrieveMessageByID(int messageID) throws SQLException;
-    public Message deleteMessageByID(int messageID) throws SQLException;
-    public Message updateMessageByID(int messageID, String messageText) throws SQLException;
-    public List<Message> retrieveMessageByAccountID(int accountID) throws SQLException;
+
+    public Message createMessage(Message message);
+    public List<Message> getAllMessages();
+    public Message getMessage(int messageID);
+    public boolean checkIfMessageExist(int messageID);
+    public Message deleteMessage(int messageID);
+    public Message updateMessage(int messageID, String messageText);
+    public List<Message> accountMessages(int accountID);
 }
