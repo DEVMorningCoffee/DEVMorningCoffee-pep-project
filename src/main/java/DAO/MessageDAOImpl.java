@@ -28,7 +28,7 @@ public class MessageDAOImpl implements MessageDAO {
 
             try (ResultSet resultSet = preparedStatement.getGeneratedKeys()) {
                 if (resultSet.next()) {
-                    return new Message(resultSet.getInt(1),
+                    return new Message(resultSet.getInt("message_id"),
                             message.getPosted_by(),
                             message.getMessage_text(),
                             message.getTime_posted_epoch());
